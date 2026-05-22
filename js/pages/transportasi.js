@@ -1,0 +1,1298 @@
+/**
+ * Transportasi Page Module
+ * Handles transportation borrowing for members and CRUD for management
+ */
+
+let transportCalendarInstance = null;
+
+async function loadTransportasiPage() {
+  const contentArea = document.getElementById("content-area");
+  const userRole = localStorage.getItem("userRole");
+  showLoader();
+
+  try {
+    contentArea.innerHTML = "";
+    const template = document
+      .getElementById("transportasi-template")
+      .content.cloneNode(true);
+    contentArea.appendChild(template);
+
+    if (userRole === "management") {
+      await renderTransportManagementView();
+    } else {
+      await renderTransportMemberListView();
+    }
+  } catch (error) {
+    contentArea.innerHTML = `<p class="text-red-500">Terjadi error: ${error.message}</p>`;
+  } finally {
+    hideLoader();
+  }
+}
+
+// ============================================================
+// MEMBER VIEW
+// ============================================================
+
+async function renderTransportMemberListView() {
+  const container = document.getElementById("transportasi-content-area");
+
+  try {
+    const transports = await api.get("/api/member?resource=transports");
+
+    if (!transports || transports.length === 0) {
+      container.innerHTML = `<p class="text-gray-500">Belum ada kendaraan terdaftar.</p>`;
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        ${transports
+          .map(
+            (t) => `
+          <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition cursor-pointer" onclick="renderTransportDetailView('${
+            t.id
+          }')">
+            <div class="h-40 bg-gray-200 flex items-center justify-center overflow-hidden">
+              ${
+                t.image_url
+                  ? `<img src="${t.image_url}" alt="${t.vehicle_name}" class="w-full h-full object-cover"/>`
+                  : `<i class="fas fa-shuttle-van text-6xl text-gray-400"></i>`
+              }
+            </div>
+            <div class="p-4">
+              <h3 class="text-lg font-bold text-gray-800">${t.vehicle_name}</h3>
+              <p class="text-sm text-gray-500">${t.plate_number}</p>
+              <div class="mt-2 flex items-center gap-4 text-sm text-gray-600">
+                <span><i class="fas fa-users mr-1"></i> ${
+                  t.capacity
+                } orang</span>
+                <span><i class="fas fa-calendar-alt mr-1"></i> ${
+                  t.vehicle_year
+                }</span>
+              </div>
+              ${
+                t.driver_name
+                  ? `<p class="mt-2 text-sm text-gray-600"><i class="fas fa-id-badge mr-1"></i> Sopir: ${t.driver_name}</p>`
+                  : ""
+              }
+            </div>
+          </div>
+        `
+          )
+          .join("")}
+      </div>
+    `;
+  } catch (error) {
+    container.innerHTML = `<p class="text-red-500">Gagal memuat data: ${error.message}</p>`;
+  }
+}
+
+async function renderTransportDetailView(transportId) {
+  const container = document.getElementById("transportasi-content-area");
+  showLoader();
+
+  try {
+    const transports = await api.get("/api/member?resource=transports");
+    const transport = transports.find((t) => t.id === transportId);
+
+    if (!transport) {
+      container.innerHTML = `<p class="text-red-500">Kendaraan tidak ditemukan.</p>`;
+      return;
+    }
+
+    container.innerHTML = `
+      <button onclick="renderTransportMemberListView()" class="mb-4 text-[#d97706] hover:underline">
+        <i class="fas fa-arrow-left mr-2"></i>Kembali ke Daftar
+      </button>
+      
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Info Kendaraan -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <div class="mb-4 h-48 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
+            ${
+              transport.image_url
+                ? `<img src="${transport.image_url}" alt="${transport.vehicle_name}" class="w-full h-full object-cover"/>`
+                : `<i class="fas fa-shuttle-van text-6xl text-gray-400"></i>`
+            }
+          </div>
+          <h2 class="text-2xl font-bold text-gray-800 mb-2">${
+            transport.vehicle_name
+          }</h2>
+          <p class="text-lg text-gray-600 mb-4">${transport.plate_number}</p>
+          
+          <div class="space-y-2 text-sm text-gray-600">
+            <p><i class="fas fa-users w-6"></i> Kapasitas: ${
+              transport.capacity
+            } orang</p>
+            <p><i class="fas fa-calendar-alt w-6"></i> Tahun: ${
+              transport.vehicle_year
+            }</p>
+            <p><i class="fas fa-tachometer-alt w-6"></i> Odometer: ${transport.odometer_km.toLocaleString()} km</p>
+            ${
+              transport.driver_name
+                ? `<p><i class="fas fa-id-badge w-6"></i> Sopir: ${transport.driver_name}</p>`
+                : ""
+            }
+            ${
+              transport.driver_whatsapp
+                ? `<p><i class="fab fa-whatsapp w-6"></i> WA Sopir: <a href="https://wa.me/${transport.driver_whatsapp.replace(
+                    /\D/g,
+                    ""
+                  )}" target="_blank" class="text-green-600 hover:underline">${
+                    transport.driver_whatsapp
+                  }</a></p>`
+                : ""
+            }
+            ${
+              (transport.pics || []).length > 0
+                ? `<p><i class="fas fa-user-tie w-6"></i> PIC: ${transport.pics.map(p => p.full_name).join(', ')}</p>`
+                : ""
+            }
+            ${
+              transport.notes
+                ? `<p class="mt-2 p-2 bg-yellow-50 rounded"><i class="fas fa-sticky-note mr-2"></i>${transport.notes}</p>`
+                : ""
+            }
+          </div>
+        </div>
+        
+        <!-- Kalender & Form -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <h3 class="text-lg font-bold text-gray-800 mb-4">Jadwal Peminjaman</h3>
+          <div id="transport-calendar" class="mb-6"></div>
+          
+          <h3 class="text-lg font-bold text-gray-800 mb-4 mt-6 pt-4 border-t">Ajukan Peminjaman</h3>
+          <form id="transport-borrow-form" class="space-y-4">
+            <input type="hidden" id="transport-borrow-id" value="${transportId}" />
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Waktu Mulai</label>
+                <input type="datetime-local" id="transport-borrow-start" required 
+                  class="w-full p-2 border border-gray-300 rounded-md" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Waktu Selesai</label>
+                <input type="datetime-local" id="transport-borrow-end" required 
+                  class="w-full p-2 border border-gray-300 rounded-md" />
+              </div>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Keperluan</label>
+              <input type="text" id="transport-borrow-purpose" placeholder="Contoh: Kunjungi jemaat sakit"
+                class="w-full p-2 border border-gray-300 rounded-md" />
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Titik Berangkat</label>
+                <input type="text" id="transport-borrow-origin" placeholder="GKI Kutisari"
+                  class="w-full p-2 border border-gray-300 rounded-md" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Tujuan</label>
+                <input type="text" id="transport-borrow-destination" placeholder="RS Husada Utama"
+                  class="w-full p-2 border border-gray-300 rounded-md" />
+              </div>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Jumlah Penumpang</label>
+              <input type="number" id="transport-borrow-passengers" min="1" max="${
+                transport.capacity
+              }" value="1"
+                class="w-full p-2 border border-gray-300 rounded-md" />
+            </div>
+            
+            <button type="submit" class="w-full bg-[#d97706] text-white font-bold py-2 px-4 rounded-md hover:bg-[#b45309]">
+              <i class="fas fa-paper-plane mr-2"></i>Ajukan Peminjaman
+            </button>
+          </form>
+        </div>
+      </div>
+    `;
+
+    await initTransportCalendar(transportId);
+
+    document
+      .getElementById("transport-borrow-form")
+      .addEventListener("submit", handleTransportBorrowSubmit);
+  } catch (error) {
+    container.innerHTML = `<p class="text-red-500">Gagal memuat detail: ${error.message}</p>`;
+  } finally {
+    hideLoader();
+  }
+}
+
+async function initTransportCalendar(transportId) {
+  const calendarEl = document.getElementById("transport-calendar");
+  if (!calendarEl) return;
+
+  let events = [];
+  try {
+    const response = await fetch(
+      `/api/schedule?type=transport&id=${transportId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
+      }
+    );
+    if (response.ok) {
+      const loans = await response.json();
+      events = loans.map((loan) => ({
+        title: loan.profiles?.full_name || "Peminjaman",
+        start: loan.borrow_start,
+        end: loan.borrow_end,
+        color:
+          loan.status === "Disetujui"
+            ? "#22c55e"
+            : loan.status === "Menunggu Persetujuan"
+            ? "#f59e0b"
+            : "#6b7280",
+      }));
+    }
+  } catch (e) {
+    console.log("Could not load schedule:", e);
+  }
+
+  if (transportCalendarInstance) {
+    transportCalendarInstance.destroy();
+  }
+
+  transportCalendarInstance = new FullCalendar.Calendar(
+    calendarEl,
+    window.getResponsiveCalendarOptions({
+      locale: "id",
+      events,
+      eventClick(info) {
+        alert(
+          `${info.event.title}\n${new Date(
+            info.event.start
+          ).toLocaleString()} - ${new Date(info.event.end).toLocaleString()}`
+        );
+      },
+    })
+  );
+
+  transportCalendarInstance.render();
+}
+
+async function handleTransportBorrowSubmit(e) {
+  e.preventDefault();
+  
+  // Get submit button and prevent double-click
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  if (submitBtn.disabled) return;
+  
+  const originalText = submitBtn.innerHTML;
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Memproses...';
+  
+  showLoader();
+
+  try {
+    const payload = {
+      transport_id: document.getElementById("transport-borrow-id").value,
+      borrow_start: document.getElementById("transport-borrow-start").value + ":00+07:00",
+      borrow_end: document.getElementById("transport-borrow-end").value + ":00+07:00",
+      purpose: document.getElementById("transport-borrow-purpose").value,
+      origin: document.getElementById("transport-borrow-origin").value,
+      destination: document.getElementById("transport-borrow-destination")
+        .value,
+      passengers_count: parseInt(
+        document.getElementById("transport-borrow-passengers").value,
+        10
+      ),
+    };
+
+    const result = await api.post("/api/member?resource=transports", payload);
+    notifySuccess(result.message);
+    e.target.reset();
+    await initTransportCalendar(payload.transport_id);
+  } catch (error) {
+    alert("Gagal mengajukan peminjaman: " + error.message);
+  } finally {
+    hideLoader();
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = originalText;
+  }
+}
+
+// ============================================================
+// MANAGEMENT VIEW
+// ============================================================
+
+let managementUserListForTransport = [];
+
+async function renderTransportManagementView() {
+  const container = document.getElementById("transportasi-content-area");
+
+  try {
+    const allUsers = await api.post("/api/management", {
+      action: "getUsers",
+    });
+    // Filter to only show management users with transport privilege
+    managementUserListForTransport = allUsers.filter(u => {
+      if (u.role !== "management") return false;
+      // If no privileges defined, assume full access
+      if (!u.privileges) return true;
+      return Array.isArray(u.privileges) && u.privileges.includes("transport");
+    });
+  } catch (e) {
+    managementUserListForTransport = [];
+  }
+
+  container.innerHTML = `<div id="transport-management-content"></div>`;
+
+  await renderTransportCrudView();
+}
+
+async function showTransportManagementTab(tab) {
+  document.getElementById("tab-transport-list").className =
+    tab === "list"
+      ? "px-4 py-2 rounded-md bg-[#d97706] text-white font-semibold"
+      : "px-4 py-2 rounded-md bg-gray-200 text-gray-700 font-semibold";
+  document.getElementById("tab-transport-pending").className =
+    tab === "pending"
+      ? "px-4 py-2 rounded-md bg-[#d97706] text-white font-semibold"
+      : "px-4 py-2 rounded-md bg-gray-200 text-gray-700 font-semibold";
+
+  if (tab === "list") {
+    await renderTransportCrudView();
+  } else {
+    await renderTransportPendingView();
+  }
+}
+
+async function renderTransportCrudView() {
+  const content = document.getElementById("transport-management-content");
+  showLoader();
+
+  try {
+    const transports = await api.post("/api/management", {
+      action: "getTransportations",
+    });
+
+    content.innerHTML = `
+      <div class="space-y-6">
+        <!-- Header & Actions -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <h2 class="text-xl font-semibold text-gray-800">Daftar Kendaraan</h2>
+          <div class="flex gap-3 self-start sm:self-auto flex-wrap">
+            <button id="transport-history-btn" class="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 flex items-center gap-2 shadow-sm">
+              <i class="fas fa-history"></i> Lihat Riwayat
+            </button>
+            <button id="transport-add-btn" class="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-600 shadow-lg shadow-amber-500/30 flex items-center gap-2 transition-all">
+              <i class="fas fa-plus"></i> Tambah Kendaraan
+            </button>
+            <button id="transport-refresh-btn" class="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 flex items-center gap-2 shadow-sm">
+              <i class="fas fa-sync"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Transport Cards Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          ${getTransportCardsHTML(transports || [])}
+        </div>
+      </div>
+    `;
+
+    // Event listeners
+    document.getElementById("transport-add-btn")?.addEventListener("click", () => openTransportModal("create"));
+    document.getElementById("transport-refresh-btn")?.addEventListener("click", () => renderTransportCrudView());
+    document.getElementById("transport-history-btn")?.addEventListener("click", () => openTransportHistoryModal());
+
+    bindTransportCardActions(content);
+  } catch (error) {
+    content.innerHTML = `<p class="text-red-500">Gagal memuat data: ${error.message}</p>`;
+  } finally {
+    hideLoader();
+  }
+}
+
+function getTransportCardsHTML(transports) {
+  if (!transports.length) {
+    return `<div class="col-span-full text-center py-12 text-gray-500"><i class="fas fa-shuttle-van text-4xl mb-3 text-gray-300"></i><p>Tidak ada kendaraan ditemukan</p></div>`;
+  }
+
+  return transports.map(t => {
+    const photo = t.image_url || "https://placehold.co/400x300/f3f4f6/9ca3af?text=Kendaraan";
+    const picsDisplay = (t.pics || []).length === 0 ? '-' :
+      (t.pics || []).length === 1 ? t.pics[0].full_name || t.pics[0].email :
+      (t.pics || []).length <= 2 ? t.pics.map(p => (p.full_name || p.email).split(' ')[0]).join(', ') :
+      t.pics.slice(0, 1).map(p => (p.full_name || p.email).split(' ')[0]).join('') + ' +' + (t.pics.length - 1);
+    const picsTitle = (t.pics || []).map(p => p.full_name || p.email).join(', ') || 'Belum ada PIC';
+    
+    return `
+      <div class="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 group border border-gray-100 flex flex-col">
+        <div class="relative h-48 overflow-hidden bg-gray-100">
+          <img src="${photo}" alt="${t.vehicle_name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" onerror="this.src='https://placehold.co/400x300/f3f4f6/9ca3af?text=Kendaraan'"/>
+          <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-4">
+            <h3 class="text-white font-bold text-lg shadow-sm">${t.vehicle_name}</h3>
+            <p class="text-white/90 text-sm"><i class="fas fa-id-card mr-1"></i> ${t.plate_number}</p>
+          </div>
+          <div class="absolute top-2 right-2">
+            <button class="transport-action-btn w-8 h-8 bg-white/90 backdrop-blur rounded-lg shadow flex items-center justify-center text-gray-600 hover:bg-white" data-transport='${encodeURIComponent(JSON.stringify(t))}'>
+              <i class="fas fa-ellipsis-v"></i>
+            </button>
+          </div>
+        </div>
+        <div class="p-4 flex-1 flex flex-col gap-3">
+          <div class="grid grid-cols-2 gap-2 text-sm text-gray-600">
+            <div class="flex items-center gap-2 bg-gray-50 p-2 rounded-lg">
+              <i class="fas fa-users text-blue-500"></i>
+              <span>${t.capacity || 0} Orang</span>
+            </div>
+            <div class="flex items-center gap-2 bg-gray-50 p-2 rounded-lg">
+              <i class="fas fa-calendar text-emerald-500"></i>
+              <span>${t.vehicle_year || '-'}</span>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-sm text-gray-600">
+            <div class="flex items-center gap-2 bg-gray-50 p-2 rounded-lg">
+              <i class="fas fa-user-tie text-amber-500"></i>
+              <span class="truncate" title="${picsTitle}">${picsDisplay}</span>
+            </div>
+            <div class="flex items-center gap-2 bg-gray-50 p-2 rounded-lg">
+              <i class="fas fa-id-badge text-purple-500"></i>
+              <span class="truncate">${t.driver_name || '-'}</span>
+            </div>
+          </div>
+          ${t.notes ? `<div class="text-xs text-gray-500 bg-yellow-50 p-2 rounded-lg"><i class="fas fa-sticky-note mr-1"></i>${t.notes}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function bindTransportCardActions(container) {
+  container.querySelectorAll(".transport-action-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const encodedTransport = btn.dataset.transport;
+      if (!encodedTransport) return;
+      const transportData = JSON.parse(decodeURIComponent(encodedTransport));
+      
+      const items = [
+        { label: "Edit", icon: "fas fa-edit", className: "text-amber-600", onClick: () => openTransportModal("edit", transportData) },
+        { label: "Lihat Jadwal", icon: "fas fa-calendar-alt", className: "text-gray-700", onClick: () => renderTransportScheduleManagementView(transportData) },
+        { label: "Hapus", icon: "fas fa-trash", className: "text-red-600", onClick: () => deleteTransportation(transportData.id) },
+      ];
+      openGlobalActionMenu({ triggerElement: btn, items });
+    });
+  });
+}
+
+function initializeTransportActionMenus(rootElement = document) {
+  const buttons = rootElement.querySelectorAll(".transport-action-btn");
+  buttons.forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      const encodedTransport = button.dataset.transport;
+      if (!encodedTransport) {
+        return;
+      }
+      const transportData = JSON.parse(decodeURIComponent(encodedTransport));
+      openGlobalActionMenu({
+        triggerElement: button,
+        items: [
+          {
+            label: "Edit",
+            icon: "fas fa-edit",
+            className: "text-amber-600",
+            onClick: () => openTransportModal("edit", transportData),
+          },
+          {
+            label: "Lihat Jadwal",
+            icon: "fas fa-calendar-alt",
+            className: "text-gray-700",
+            onClick: () => renderTransportScheduleManagementView(transportData),
+          },
+          {
+            label: "Hapus",
+            icon: "fas fa-trash-alt",
+            className: "text-red-600",
+            onClick: () => deleteTransportation(transportData.id),
+          },
+        ],
+      });
+    });
+  });
+}
+
+async function renderTransportScheduleManagementView(transportData) {
+  const container = document.getElementById("transportasi-content-area");
+  if (!container) return;
+
+  showLoader();
+  try {
+    container.innerHTML = `
+      <button id="back-to-transport-management" class="mb-4 text-[#d97706] hover:underline">
+        <i class="fas fa-arrow-left mr-2"></i>Kembali ke Transportasi
+      </button>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="bg-white rounded-lg shadow-md p-6 space-y-4">
+          <div class="h-40 bg-gray-100 rounded-md flex items-center justify-center overflow-hidden">
+            ${
+              transportData.image_url
+                ? `<img src="${transportData.image_url}" alt="${transportData.vehicle_name}" class="w-full h-full object-cover" />`
+                : '<i class="fas fa-shuttle-van text-4xl text-gray-400"></i>'
+            }
+          </div>
+          <div>
+            <h2 class="text-2xl font-bold text-gray-800">${
+              transportData.vehicle_name
+            }</h2>
+            <p class="text-gray-600">${transportData.plate_number}</p>
+          </div>
+          <div class="text-sm text-gray-600 space-y-1">
+            <p><i class="fas fa-calendar mr-2"></i>Tahun: ${
+              transportData.vehicle_year || "-"
+            }</p>
+            <p><i class="fas fa-users mr-2"></i>Kapasitas: ${
+              transportData.capacity || "-"
+            } orang</p>
+            <p><i class="fas fa-user-tie mr-2"></i>PIC: ${
+              (transportData.pics || []).length > 0 
+                ? transportData.pics.map(p => p.full_name || p.email).join(', ') 
+                : "-"
+            }</p>
+            <p><i class="fas fa-id-badge mr-2"></i>Sopir: ${
+              transportData.driver_name || "-"
+            }</p>
+          </div>
+        </div>
+        <div class="lg:col-span-2 bg-white rounded-lg shadow-md p-6">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">Jadwal Peminjaman</h3>
+          <div id="transport-calendar"></div>
+        </div>
+      </div>
+    `;
+
+    document
+      .getElementById("back-to-transport-management")
+      .addEventListener("click", () => renderTransportManagementView());
+
+    await initTransportCalendar(transportData.id);
+  } catch (error) {
+    container.innerHTML = `<p class="text-red-500">Gagal memuat jadwal: ${error.message}</p>`;
+  } finally {
+    hideLoader();
+  }
+}
+
+async function renderTransportPendingView() {
+  const content = document.getElementById("transport-management-content");
+  showLoader();
+
+  try {
+    const pendingLoans = await api.post("/api/management", {
+      action: "getPendingTransportLoans",
+    });
+
+    content.innerHTML = `
+      <div class="bg-white rounded-lg shadow-md overflow-x-auto">
+        <table class="min-w-full">
+          <thead class="bg-gray-100">
+            <tr>
+              <th class="text-left p-3">Pemohon</th>
+              <th class="text-left p-3">Kendaraan</th>
+              <th class="text-left p-3">Jadwal</th>
+              <th class="text-left p-3">Keperluan</th>
+              <th class="text-left p-3">Rute</th>
+              <th class="text-left p-3">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${
+              !pendingLoans || pendingLoans.length === 0
+                ? `<tr><td colspan="6" class="p-4 text-center text-gray-500">Tidak ada permintaan menunggu.</td></tr>`
+                : pendingLoans
+                    .map(
+                      (loan) => `
+                <tr class="border-b hover:bg-gray-50">
+                  <td class="p-3 font-medium">${
+                    loan.profiles?.full_name || "-"
+                  }</td>
+                  <td class="p-3">
+                    ${loan.transportations?.vehicle_name || "-"}<br>
+                    <span class="text-xs text-gray-500">${
+                      loan.transportations?.plate_number || ""
+                    }</span>
+                  </td>
+                  <td class="p-3 text-sm">
+                    ${new Date(loan.borrow_start).toLocaleString("id-ID")}<br>
+                    <span class="text-gray-500">s/d</span><br>
+                    ${new Date(loan.borrow_end).toLocaleString("id-ID")}
+                  </td>
+                  <td class="p-3">${loan.purpose || "-"}</td>
+                  <td class="p-3 text-sm">
+                    ${loan.origin || "-"} → ${loan.destination || "-"}<br>
+                    <span class="text-xs text-gray-500">${
+                      loan.passengers_count || 1
+                    } org</span>
+                  </td>
+                  <td class="p-3 whitespace-nowrap">
+                    <button onclick="updateTransportLoanStatus('${
+                      loan.id
+                    }', 'Disetujui')" 
+                      class="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600 mr-2">
+                      <i class="fas fa-check"></i> Setujui
+                    </button>
+                    <button onclick="updateTransportLoanStatus('${
+                      loan.id
+                    }', 'Ditolak')" 
+                      class="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600">
+                      <i class="fas fa-times"></i> Tolak
+                    </button>
+                  </td>
+                </tr>
+              `
+                    )
+                    .join("")
+            }
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch (error) {
+    content.innerHTML = `<p class="text-red-500">Gagal memuat data: ${error.message}</p>`;
+  } finally {
+    hideLoader();
+  }
+}
+
+async function updateTransportLoanStatus(loanId, newStatus) {
+  if (
+    !confirm(
+      `Yakin ingin ${
+        newStatus === "Disetujui" ? "menyetujui" : "menolak"
+      } peminjaman ini?`
+    )
+  ) {
+    return;
+  }
+
+  try {
+    const result = await api.post("/api/management", {
+      action: "updateTransportLoanStatus",
+      payload: { loanId, newStatus },
+    });
+    notifySuccess(result.message);
+    await renderTransportPendingView();
+  } catch (error) {
+    alert("Gagal: " + error.message);
+  }
+}
+
+function openTransportModal(mode, data = {}) {
+  let modal = document.getElementById("transport-modal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "transport-modal";
+    modal.className =
+      "modal fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50";
+    modal.innerHTML = `
+      <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <h2 id="transport-modal-title" class="text-2xl font-bold mb-6"></h2>
+        <form id="transport-modal-form">
+          <input type="hidden" id="transport-modal-id" />
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Nama Kendaraan *</label>
+              <input type="text" id="transport-modal-name" required class="w-full p-2 border border-gray-300 rounded-md" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Nomor Plat *</label>
+              <input type="text" id="transport-modal-plate" required class="w-full p-2 border border-gray-300 rounded-md" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Tahun</label>
+              <input type="number" id="transport-modal-year" class="w-full p-2 border border-gray-300 rounded-md" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Odometer (km)</label>
+              <input type="number" id="transport-modal-odometer" class="w-full p-2 border border-gray-300 rounded-md" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Kapasitas (orang) *</label>
+              <input type="number" id="transport-modal-capacity" required min="1" class="w-full p-2 border border-gray-300 rounded-md" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Penanggung Jawab (PIC) *</label>
+              <p class="text-xs text-gray-500 mb-2">Pilih satu atau lebih PIC yang akan menerima notifikasi peminjaman</p>
+              <div id="transport-modal-pic-container" class="max-h-32 overflow-y-auto border border-gray-300 rounded-md p-2 space-y-1 bg-gray-50">
+                <!-- PIC checkboxes will be populated dynamically -->
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Nama Sopir</label>
+              <input type="text" id="transport-modal-driver" class="w-full p-2 border border-gray-300 rounded-md" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">WA Sopir</label>
+              <input type="text" id="transport-modal-driver-wa" placeholder="08xxx" class="w-full p-2 border border-gray-300 rounded-md" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Service Terakhir</label>
+              <input type="date" id="transport-modal-last-service" class="w-full p-2 border border-gray-300 rounded-md" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Service Berikutnya</label>
+              <input type="date" id="transport-modal-next-service" class="w-full p-2 border border-gray-300 rounded-md" />
+            </div>
+            <div class="md:col-span-2">
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Foto Kendaraan (maks. 2 MB)
+              </label>
+
+              <div class="flex items-center gap-4">
+                <!-- Preview -->
+                <div class="w-32 h-20 bg-gray-100 rounded-md flex items-center justify-center overflow-hidden">
+                  <img
+                    id="transport-modal-image-preview"
+                    src=""
+                    alt="Preview Kendaraan"
+                    class="w-full h-full object-cover hidden"
+                  />
+                  <i
+                    id="transport-modal-image-placeholder"
+                    class="fas fa-shuttle-van text-3xl text-gray-400"
+                  ></i>
+                </div>
+
+                <!-- Input file + hidden URL -->
+                <div class="flex-1 space-y-2">
+                  <input
+                    type="file"
+                    id="transport-modal-image-file"
+                    accept="image/*"
+                    class="block w-full text-sm text-gray-900 border border-gray-300 rounded-md cursor-pointer bg-gray-50 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                  />
+
+                  <!-- Hidden: URL dari server disimpan di sini -->
+                  <input type="hidden" id="transport-modal-image" />
+
+                  <p class="text-xs text-gray-500">
+                    Pilih file untuk mengunggah foto. Jika tidak diisi, foto akan dibiarkan kosong atau tetap.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Catatan</label>
+              <textarea id="transport-modal-notes" rows="2" class="w-full p-2 border border-gray-300 rounded-md"></textarea>
+            </div>
+          </div>
+          <div class="flex justify-end space-x-4 mt-6">
+            <button type="button" onclick="closeTransportModal()" class="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300">Batal</button>
+            <button type="submit" class="px-4 py-2 bg-[#d97706] text-white rounded-md hover:bg-[#b45309]">Simpan</button>
+          </div>
+        </form>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    const form = document.getElementById("transport-modal-form");
+    if (form) {
+      form.addEventListener("submit", handleTransportFormSubmit);
+    }
+
+    const imageFileInput = document.getElementById(
+      "transport-modal-image-file"
+    );
+    const imagePreview = document.getElementById(
+      "transport-modal-image-preview"
+    );
+    const imagePlaceholder = document.getElementById(
+      "transport-modal-image-placeholder"
+    );
+
+    if (imageFileInput) {
+      imageFileInput.addEventListener("change", () => {
+        const file =
+          imageFileInput.files && imageFileInput.files.length > 0
+            ? imageFileInput.files[0]
+            : null;
+        if (file && imagePreview && imagePlaceholder) {
+          const blobUrl = URL.createObjectURL(file);
+          imagePreview.src = blobUrl;
+          imagePreview.classList.remove("hidden");
+          imagePlaceholder.classList.add("hidden");
+        } else if (imagePreview && imagePlaceholder) {
+          imagePreview.src = "";
+          imagePreview.classList.add("hidden");
+          imagePlaceholder.classList.remove("hidden");
+        }
+      });
+    }
+  }
+
+  // Populate PIC checkboxes
+  const picContainer = document.getElementById("transport-modal-pic-container");
+  const existingPicIds = (data.pics || []).map(p => p.id);
+  
+  if (managementUserListForTransport.length === 0) {
+    picContainer.innerHTML = `<p class="text-gray-400 text-sm p-2">Tidak ada user management dengan privilege transportasi</p>`;
+  } else {
+    picContainer.innerHTML = managementUserListForTransport.map(u => `
+      <label class="flex items-center gap-2 p-1 rounded hover:bg-gray-100 cursor-pointer">
+        <input type="checkbox" name="transport_pic_ids" value="${u.id}" 
+          ${existingPicIds.includes(u.id) ? "checked" : ""}
+          class="rounded text-amber-600 focus:ring-amber-500"/>
+        <span class="text-sm">${u.full_name || u.email}</span>
+        <span class="text-xs text-gray-400">(${u.email})</span>
+      </label>
+    `).join("");
+  }
+
+  // Fill form fields
+  document.getElementById("transport-modal-title").textContent =
+    mode === "edit" ? "Edit Kendaraan" : "Tambah Kendaraan Baru";
+  document.getElementById("transport-modal-id").value = data.id || "";
+  document.getElementById("transport-modal-name").value =
+    data.vehicle_name || "";
+  document.getElementById("transport-modal-plate").value =
+    data.plate_number || "";
+  document.getElementById("transport-modal-year").value =
+    data.vehicle_year || new Date().getFullYear();
+  document.getElementById("transport-modal-odometer").value =
+    data.odometer_km || 0;
+  document.getElementById("transport-modal-capacity").value =
+    data.capacity || 7;
+  document.getElementById("transport-modal-driver").value =
+    data.driver_name || "";
+  document.getElementById("transport-modal-driver-wa").value =
+    data.driver_whatsapp || "";
+  document.getElementById("transport-modal-last-service").value =
+    data.last_service_at || "";
+  document.getElementById("transport-modal-next-service").value =
+    data.next_service_at || "";
+  document.getElementById("transport-modal-image").value = data.image_url || "";
+  document.getElementById("transport-modal-notes").value = data.notes || "";
+
+  const imageFileInput = document.getElementById("transport-modal-image-file");
+  const imagePreview = document.getElementById("transport-modal-image-preview");
+  const imagePlaceholder = document.getElementById(
+    "transport-modal-image-placeholder"
+  );
+
+  if (imageFileInput) {
+    imageFileInput.value = "";
+  }
+
+  const existingImageUrl = data.image_url || "";
+  if (imagePreview && imagePlaceholder) {
+    if (existingImageUrl) {
+      imagePreview.src = existingImageUrl;
+      imagePreview.classList.remove("hidden");
+      imagePlaceholder.classList.add("hidden");
+    } else {
+      imagePreview.src = "";
+      imagePreview.classList.add("hidden");
+      imagePlaceholder.classList.remove("hidden");
+    }
+  }
+
+  modal.classList.remove("hidden");
+  modal.classList.add("flex");
+}
+
+function closeTransportModal() {
+  const modal = document.getElementById("transport-modal");
+  if (modal) {
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+  }
+}
+
+// Helper upload gambar kendaraan via /api/website-hero-video
+async function uploadTransportImage(file) {
+  const MAX_BYTES = 2 * 1024 * 1024; // 2 MB
+
+  if (!file) {
+    throw new Error("File gambar tidak ditemukan.");
+  }
+  if (file.size > MAX_BYTES) {
+    throw new Error("Ukuran gambar melebihi 2 MB.");
+  }
+
+  const token = localStorage.getItem("authToken");
+  if (!token) {
+    throw new Error(
+      "Token login tidak ditemukan. Silakan login ulang kemudian coba lagi."
+    );
+  }
+
+  const base64Data = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () =>
+      reject(new Error("Gagal membaca file gambar (FileReader error)."));
+    reader.readAsDataURL(file);
+  });
+
+  const resp = await fetch("/api/website-hero-video", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      fileName: file.name,
+      mimeType: file.type || "image/jpeg",
+      base64Data,
+      target: "transport",
+    }),
+  });
+
+  const result = await resp.json().catch(() => ({}));
+  if (!resp.ok) {
+    throw new Error(result.error || "Gagal mengunggah gambar kendaraan.");
+  }
+
+  if (!result.url) {
+    throw new Error("Server tidak mengembalikan URL gambar.");
+  }
+
+  return result.url;
+}
+
+async function handleTransportFormSubmit(e) {
+  e.preventDefault();
+  const transportId = document.getElementById("transport-modal-id").value;
+  const action = transportId ? "updateTransportation" : "createTransportation";
+
+  try {
+    const imageFileInput = document.getElementById(
+      "transport-modal-image-file"
+    );
+    const imageUrlInput = document.getElementById("transport-modal-image");
+
+    let imageUrl = imageUrlInput ? imageUrlInput.value.trim() : "";
+    const file =
+      imageFileInput && imageFileInput.files && imageFileInput.files.length > 0
+        ? imageFileInput.files[0]
+        : null;
+
+    // Kalau ada file baru → upload dulu, pakai URL hasil upload
+    if (file) {
+      imageUrl = await uploadTransportImage(file);
+      if (imageUrlInput) {
+        imageUrlInput.value = imageUrl;
+      }
+    }
+
+    // Collect all checked PIC IDs
+    const picCheckboxes = document.querySelectorAll("input[name='transport_pic_ids']:checked");
+    const picIds = Array.from(picCheckboxes).map(cb => cb.value);
+
+    const payload = {
+      vehicle_name: document.getElementById("transport-modal-name").value,
+      plate_number: document.getElementById("transport-modal-plate").value,
+      vehicle_year: parseInt(
+        document.getElementById("transport-modal-year").value,
+        10
+      ),
+      odometer_km:
+        parseInt(
+          document.getElementById("transport-modal-odometer").value,
+          10
+        ) || 0,
+      capacity: parseInt(
+        document.getElementById("transport-modal-capacity").value,
+        10
+      ),
+      pic_ids: picIds,
+      driver_name:
+        document.getElementById("transport-modal-driver").value || null,
+      driver_whatsapp:
+        document.getElementById("transport-modal-driver-wa").value || null,
+      last_service_at:
+        document.getElementById("transport-modal-last-service").value || null,
+      next_service_at:
+        document.getElementById("transport-modal-next-service").value || null,
+      image_url: imageUrl || null,
+      notes: document.getElementById("transport-modal-notes").value || null,
+    };
+
+    if (transportId) {
+      payload.transportId = transportId;
+    }
+
+    const result = await api.post("/api/management", { action, payload });
+    notifySuccess(result.message);
+    closeTransportModal();
+    await renderTransportCrudView();
+  } catch (error) {
+    alert("Gagal menyimpan: " + error.message);
+  }
+}
+
+async function deleteTransportation(transportId) {
+  if (!confirm("Yakin ingin menghapus kendaraan ini?")) return;
+
+  try {
+    const result = await api.post("/api/management", {
+      action: "deleteTransportation",
+      payload: { transportId },
+    });
+    notifySuccess(result.message);
+    await renderTransportCrudView();
+  } catch (error) {
+    alert("Gagal menghapus: " + error.message);
+  }
+}
+
+// ============================================================
+// TRANSPORT HISTORY MODAL - FULLSCREEN VERSION
+// ============================================================
+async function openTransportHistoryModal() {
+  let currentData = [];
+  let currentPeriod = "1";
+  let currentStatus = "all";
+  
+  function getDateRange(period) {
+    const end = new Date();
+    const start = new Date();
+    switch(period) {
+      case "1": start.setMonth(start.getMonth() - 1); break;
+      case "3": start.setMonth(start.getMonth() - 3); break;
+      case "6": start.setMonth(start.getMonth() - 6); break;
+      case "12": start.setMonth(start.getMonth() - 12); break;
+      default: return null;
+    }
+    return { start: start.toISOString().split("T")[0], end: end.toISOString().split("T")[0] };
+  }
+  
+  let dates = getDateRange("1");
+  let currentStartDate = dates.start;
+  let currentEndDate = dates.end;
+
+  const content = `
+    <div class="h-full flex flex-col">
+      <!-- Filter Bar -->
+      <div class="bg-gray-50 rounded-xl p-4 mb-4 border border-gray-200">
+        <div class="flex flex-wrap gap-4 items-end">
+          <div class="min-w-[160px]">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">
+              <i class="fas fa-clock text-amber-500 mr-1"></i> Periode
+            </label>
+            <select id="history-period" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white">
+              <option value="1" selected>1 Bulan Terakhir</option>
+              <option value="3">3 Bulan Terakhir</option>
+              <option value="6">6 Bulan Terakhir</option>
+              <option value="12">1 Tahun Terakhir</option>
+              <option value="custom">Pilih Tanggal...</option>
+            </select>
+          </div>
+          <div id="custom-date-container" class="hidden flex-1 flex gap-3 items-end">
+            <div class="flex-1 min-w-[140px]">
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                <i class="fas fa-calendar text-amber-500 mr-1"></i> Dari
+              </label>
+              <input type="date" id="history-start-date" value="${currentStartDate}" 
+                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"/>
+            </div>
+            <div class="flex-1 min-w-[140px]">
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                <i class="fas fa-calendar-check text-amber-500 mr-1"></i> Sampai
+              </label>
+              <input type="date" id="history-end-date" value="${currentEndDate}" 
+                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"/>
+            </div>
+            <button id="history-apply-custom" class="px-4 py-2.5 bg-amber-500 text-white rounded-lg hover:bg-amber-600 font-medium">
+              <i class="fas fa-check"></i>
+            </button>
+          </div>
+          <div class="min-w-[160px]">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">
+              <i class="fas fa-filter text-amber-500 mr-1"></i> Status
+            </label>
+            <select id="history-status" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white">
+              <option value="all">Semua Status</option>
+              <option value="Disetujui">Disetujui</option>
+              <option value="Ditolak">Ditolak</option>
+              <option value="Menunggu Persetujuan">Menunggu Persetujuan</option>
+              <option value="Selesai">Selesai</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-2 ml-auto">
+            <button id="history-export-csv" class="px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 flex items-center gap-2 font-medium shadow-sm">
+              <i class="fas fa-file-csv"></i> CSV
+            </button>
+            <button id="history-export-excel" class="px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 flex items-center gap-2 font-medium shadow-sm">
+              <i class="fas fa-file-excel"></i> Excel
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data Container -->
+      <div id="history-data-container" class="flex-1 overflow-y-auto bg-white rounded-xl border border-gray-200">
+        <div class="flex items-center justify-center py-16 text-gray-400">
+          <i class="fas fa-spinner fa-spin text-2xl mr-3"></i> Memuat data...
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="flex justify-between items-center pt-4 border-t border-gray-200 mt-4">
+        <div id="history-total" class="text-sm text-gray-600 font-medium"></div>
+        <button onclick="closeFullscreenModal()" class="px-6 py-2.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium">
+          <i class="fas fa-times mr-2"></i> Tutup
+        </button>
+      </div>
+    </div>
+  `;
+
+  openFullscreenModal({
+    title: "Riwayat Peminjaman Transportasi",
+    contentHTML: content
+  });
+
+  async function loadHistoryData() {
+    const container = document.getElementById("history-data-container");
+    const totalEl = document.getElementById("history-total");
+    
+    container.innerHTML = `<div class="flex items-center justify-center py-16 text-gray-400"><i class="fas fa-spinner fa-spin text-2xl mr-3"></i> Memuat data...</div>`;
+    
+    try {
+      currentData = await api.post("/api/management", {
+        action: "getTransportLoanHistory",
+        payload: { startDate: currentStartDate, endDate: currentEndDate, status: currentStatus }
+      });
+
+      if (!currentData || currentData.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-16 text-gray-400">
+            <i class="fas fa-inbox text-5xl mb-4"></i>
+            <p class="text-lg">Tidak ada data untuk periode ini</p>
+          </div>`;
+        totalEl.textContent = "";
+        return;
+      }
+
+      const grouped = groupDataByMonth(currentData, "borrow_start");
+
+      let html = "";
+      grouped.forEach(group => {
+        html += `
+          <div class="mb-6">
+            <div class="bg-gradient-to-r from-gray-100 to-gray-50 px-5 py-3 font-bold text-gray-700 sticky top-0 border-b border-gray-200 flex items-center gap-2">
+              <i class="fas fa-calendar-alt text-amber-500"></i>
+              ${group.label} 
+              <span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-sm font-medium">${group.items.length}</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="min-w-full">
+                <thead class="bg-gray-50 text-xs uppercase tracking-wider text-gray-500 border-b border-gray-200">
+                  <tr>
+                    <th class="px-5 py-3 text-left font-semibold">Tanggal</th>
+                    <th class="px-5 py-3 text-left font-semibold">Kendaraan</th>
+                    <th class="px-5 py-3 text-left font-semibold">Keperluan</th>
+                    <th class="px-5 py-3 text-left font-semibold">Rute</th>
+                    <th class="px-5 py-3 text-left font-semibold">Pemohon</th>
+                    <th class="px-5 py-3 text-left font-semibold">Status</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  ${group.items.map(item => `
+                    <tr class="hover:bg-amber-50/50 transition-colors">
+                      <td class="px-5 py-3 text-sm">${new Date(item.borrow_start).toLocaleDateString("id-ID")}</td>
+                      <td class="px-5 py-3">
+                        <div class="font-medium text-gray-800">${item.transportations?.vehicle_name || "-"}</div>
+                        <div class="text-xs text-gray-400 font-mono">${item.transportations?.plate_number || ""}</div>
+                      </td>
+                      <td class="px-5 py-3 text-sm text-gray-600">${item.purpose || "-"}</td>
+                      <td class="px-5 py-3 text-sm">${item.origin || "-"} → ${item.destination || "-"}</td>
+                      <td class="px-5 py-3 text-sm">${item.profiles?.full_name || "-"}</td>
+                      <td class="px-5 py-3">${getStatusBadgeHTML(item.status)}</td>
+                    </tr>
+                  `).join("")}
+                </tbody>
+              </table>
+            </div>
+          </div>`;
+      });
+
+      container.innerHTML = html;
+      totalEl.innerHTML = `<span class="text-amber-600 font-bold">${currentData.length}</span> data ditemukan`;
+
+    } catch (error) {
+      container.innerHTML = `
+        <div class="text-center py-16 text-red-500">
+          <i class="fas fa-exclamation-triangle text-5xl mb-4"></i>
+          <p class="text-lg font-medium">Gagal memuat data</p>
+          <p class="text-sm text-gray-500 mt-2">${error.message}</p>
+        </div>`;
+    }
+  }
+
+  setTimeout(loadHistoryData, 100);
+
+  setTimeout(() => {
+    const periodSelect = document.getElementById("history-period");
+    const customContainer = document.getElementById("custom-date-container");
+    const statusSelect = document.getElementById("history-status");
+    
+    periodSelect?.addEventListener("change", (e) => {
+      currentPeriod = e.target.value;
+      if (currentPeriod === "custom") {
+        customContainer.classList.remove("hidden");
+      } else {
+        customContainer.classList.add("hidden");
+        const dates = getDateRange(currentPeriod);
+        if (dates) {
+          currentStartDate = dates.start;
+          currentEndDate = dates.end;
+          loadHistoryData();
+        }
+      }
+    });
+    
+    statusSelect?.addEventListener("change", () => {
+      currentStatus = statusSelect.value;
+      loadHistoryData();
+    });
+    
+    document.getElementById("history-apply-custom")?.addEventListener("click", () => {
+      currentStartDate = document.getElementById("history-start-date").value;
+      currentEndDate = document.getElementById("history-end-date").value;
+      loadHistoryData();
+    });
+
+    document.getElementById("history-export-csv")?.addEventListener("click", () => {
+      const columns = [
+        { label: "Tanggal", getValue: item => new Date(item.borrow_start).toLocaleDateString("id-ID") },
+        { label: "Waktu Mulai", getValue: item => new Date(item.borrow_start).toLocaleTimeString("id-ID") },
+        { label: "Waktu Selesai", getValue: item => new Date(item.borrow_end).toLocaleTimeString("id-ID") },
+        { label: "Kendaraan", getValue: item => item.transportations?.vehicle_name || "-" },
+        { label: "Plat", getValue: item => item.transportations?.plate_number || "-" },
+        { label: "Keperluan", key: "purpose" },
+        { label: "Rute", getValue: item => `${item.origin || "-"} → ${item.destination || "-"}` },
+        { label: "Pemohon", getValue: item => item.profiles?.full_name || "-" },
+        { label: "Status", key: "status" }
+      ];
+      exportToCSV(currentData, "riwayat_transportasi", columns);
+    });
+
+    document.getElementById("history-export-excel")?.addEventListener("click", () => {
+      const columns = [
+        { label: "Tanggal", getValue: item => new Date(item.borrow_start).toLocaleDateString("id-ID") },
+        { label: "Waktu Mulai", getValue: item => new Date(item.borrow_start).toLocaleTimeString("id-ID") },
+        { label: "Waktu Selesai", getValue: item => new Date(item.borrow_end).toLocaleTimeString("id-ID") },
+        { label: "Kendaraan", getValue: item => item.transportations?.vehicle_name || "-" },
+        { label: "Plat", getValue: item => item.transportations?.plate_number || "-" },
+        { label: "Keperluan", key: "purpose" },
+        { label: "Rute", getValue: item => `${item.origin || "-"} → ${item.destination || "-"}` },
+        { label: "Pemohon", getValue: item => item.profiles?.full_name || "-" },
+        { label: "Status", key: "status" }
+      ];
+      exportToExcel(currentData, "riwayat_transportasi", columns);
+    });
+  }, 150);
+}

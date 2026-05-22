@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard GKI Kutisari</title>
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <meta name="theme-color" content="#111827" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <link rel="icon" href="/icon-192.png" type="image/png" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="bg-gray-100">
+    <!-- Loader -->
+    <div id="page-loader" class="loader-hidden">
+      <svg>
+        <g><path d="M 50,100 A 1,1 0 0 1 50,0" /></g>
+        <g><path d="M 50,75 A 1,1 0 0 0 50,-25" /></g>
+        <defs>
+          <linearGradient id="gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" style="stop-color: #1f2937; stop-opacity: 1" />
+            <stop offset="100%" style="stop-color: #d97706; stop-opacity: 1" />
+          </linearGradient>
+        </defs>
+      </svg>
+      <div class="loading-text">Sedang memuat data...</div>
+    </div>
+
+    <!-- Tampilan Login Baruuuuu -->
+    <div id="login-screen">
+      <div class="bg-animation">
+        <div class="floating-circle circle-1"></div>
+        <div class="floating-circle circle-2"></div>
+        <div class="floating-circle circle-3"></div>
+      </div>
+      <div class="login-container">
+        <div class="logo-container">
+          <div class="logo">GKI</div>
+          <h1 class="title">Sistem Informasi GKI Kutisari</h1>
+        </div>
+        <form id="login-form">
+          <div class="form-group">
+            <label for="email">Email</label>
+            <div class="input-container">
+              <input
+                type="email"
+                id="email"
+                name="email"
+                required
+                value="managementgkikutisari@gmail.com"
+              />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="password">Password</label>
+            <div class="input-container">
+              <input
+                type="password"
+                id="password"
+                name="password"
+                required
+                value="harisgay"
+              />
+            </div>
+          </div>
+          <button type="submit" class="login-btn">
+            <span>Login</span>
+          </button>
+          <p
+            id="login-feedback"
+            class="mt-4 text-center text-red-700 font-semibold"
+          ></p>
+        </form>
+      </div>
+    </div>
+
+    <!-- Layout Aplikasi Utama -->
+    <div id="app-layout" class="hidden">
+      <div class="relative min-h-screen md:flex">
+        <div
+          id="sidebar"
+          class="fixed inset-y-0 left-0 w-64 bg-gray-800 text-white flex flex-col transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out z-30"
+        >
+          <div class="flex items-center px-6 py-6">
+            <img
+              src="logo.png"
+              alt="Logo GKI Kutisari"
+              class="h-10 w-10 mr-3"
+            />
+            <span id="user-greeting" class="text-gray-300"></span>
+          </div>
+          <nav class="flex-1 px-4 py-4 space-y-2">
+            <a
+              href="#dashboard"
+              class="nav-link flex items-center px-4 py-2 rounded-md hover:bg-gray-700"
+            >
+              <i class="fas fa-tachometer-alt w-6"></i> Dashboard
+            </a>
+            <a
+              href="#barang"
+              id="barang-link"
+              class="nav-link flex items-center px-4 py-2 rounded-md hover:bg-gray-700"
+            >
+              <i class="fas fa-boxes w-6"></i> Barang
+            </a>
+            <a
+              href="#transportasi"
+              id="transportasi-link"
+              class="nav-link flex items-center px-4 py-2 rounded-md hover:bg-gray-700"
+            >
+              <i class="fas fa-shuttle-van w-6"></i> Transportasi
+            </a>
+            <a
+              href="#ruangan"
+              id="ruangan-link"
+              class="nav-link flex items-center px-4 py-2 rounded-md hover:bg-gray-700"
+            >
+              <i class="fas fa-building w-6"></i> Ruangan
+            </a>
+            <a
+              href="#user-management"
+              id="management-link"
+              class="nav-link flex items-center px-4 py-2 rounded-md hover:bg-gray-700 hidden"
+            >
+              <i class="fas fa-users-cog w-6"></i> User Management
+            </a>
+            <a
+              href="#stok-opname"
+              id="stok-opname-link"
+              class="nav-link flex items-center px-4 py-2 rounded-md hover:bg-gray-700 hidden"
+            >
+              <i class="fas fa-clipboard-check w-6"></i> Stok Opname
+            </a>
+            <a
+              href="#"
+              data-page="website-gki"
+              id="website-gki-link"
+              class="nav-link flex items-center px-4 py-2 rounded-md hover:bg-gray-700 hidden"
+            >
+              <i class="fas fa-globe w-6"></i>
+              Website GKI
+            </a>
+          </nav>
+          <div class="p-4 border-t border-gray-700 md:hidden">
+            <button
+              id="close-sidebar-button"
+              class="flex items-center w-full px-4 py-2 text-left rounded-md hover:bg-gray-700"
+            >
+              <i class="fas fa-times w-6"></i> Tutup Menu
+            </button>
+          </div>
+          <div class="px-4 py-4">
+            <a
+              href="#"
+              id="logout-button"
+              class="flex items-center w-full px-4 py-2 text-left rounded-md hover:bg-gray-700"
+              ><i class="fas fa-sign-out-alt w-6"></i> Logout</a
+            >
+          </div>
+        </div>
+        <div
+          id="sidebar-overlay"
+          class="fixed inset-0 bg-black opacity-50 hidden z-20"
+        ></div>
+        <main class="flex-1 p-10 overflow-y-auto">
+          <button
+            id="hamburger-button"
+            class="md:hidden fixed top-4 left-4 z-10 p-2 bg-gray-800 text-white rounded-md"
+          >
+            <i class="fas fa-bars"></i>
+          </button>
+          <div id="content-area"></div>
+        </main>
+      </div>
+    </div>
+
+    <!-- Templates -->
+    <template id="dashboard-template">
+      <div id="manager-dashboard-content" class="hidden"></div>
+      <div id="member-dashboard-content" class="hidden"></div>
+    </template>
+    <template id="barang-template">
+      <h1 class="text-3xl font-bold text-gray-800 mb-6">Peminjaman Barang</h1>
+      <div id="barang-content-area"></div>
+    </template>
+    <template id="ruangan-template">
+      <h1 class="text-3xl font-bold text-gray-800 mb-6">Reservasi Ruangan</h1>
+      <div id="ruangan-content-area"></div>
+    </template>
+    <template id="transportasi-template">
+      <h1 class="text-3xl font-bold text-gray-800 mb-6">
+        Peminjaman Transportasi
+      </h1>
+      <div id="transportasi-content-area"></div>
+    </template>
+    <template id="stok-opname-template">
+      <h1 class="text-3xl font-bold text-gray-800 mb-6">Stok Opname</h1>
+      <div id="stok-opname-content-area"></div>
+    </template>
+    <template id="user-management-template">
+      <h1 class="text-3xl font-bold text-gray-800 mb-6">Manajemen Pengguna</h1>
+      <div id="user-management-content-area"></div>
+    </template>
+
+    <template id="website-gki-template">
+      <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-8">
+          <div>
+            <h1 class="text-3xl font-bold text-gray-800">Kelola Website GKI</h1>
+            <p class="text-gray-600 mt-2">
+              Ubah konten hero dan jadwal ibadah yang tampil di website publik
+            </p>
+          </div>
+          <button
+            id="saveWebsiteBtn"
+            class="bg-[#d97706] hover:bg-[#b45309] text-white font-semibold px-6 py-3 rounded-lg transition flex items-center gap-2"
+          >
+            <i class="fas fa-save"></i>
+            Simpan Perubahan
+          </button>
+        </div>
+
+        <!-- Hero Section Editor -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+          <div class="flex items-center gap-3 mb-4">
+            <i class="fas fa-home text-amber-600 text-xl"></i>
+            <h2 class="text-xl font-bold text-gray-800">
+              Hero Section (Beranda)
+            </h2>
+          </div>
+          <p class="text-sm text-gray-600 mb-6">
+            Teks utama yang muncul pertama kali saat pengunjung membuka website
+          </p>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                Judul Utama
+              </label>
+              <input
+                type="text"
+                id="heroTitle"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Selamat Datang di GKI Kutisari Indah"
+                maxlength="100"
+              />
+              <p class="text-xs text-gray-500 mt-1">Maksimal 100 karakter</p>
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                Sub Judul
+              </label>
+              <textarea
+                id="heroSubtitle"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                rows="3"
+                placeholder="Gereja yang bertumbuh dalam Iman, Kasih, dan Pelayanan bagi sesama."
+                maxlength="200"
+              ></textarea>
+              <p class="text-xs text-gray-500 mt-1">Maksimal 200 karakter</p>
+            </div>
+
+            <div class="mt-4">
+              <label
+                for="heroVideoFile"
+                class="block text-sm font-semibold text-gray-700 mb-2"
+              >
+                Video Hero
+              </label>
+              <input
+                id="heroVideoFile"
+                type="file"
+                accept="video/mp4,video/webm,video/ogg"
+                class="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-blue-700 hover:file:bg-blue-100"
+              />
+              <p class="mt-1 text-xs text-gray-500">
+                Format MP4/WebM/Ogg, ukuran maksimum ±4 MB (dibatasi server).
+              </p>
+              <video
+                id="heroVideoPreview"
+                class="mt-3 w-full max-h-64 rounded-lg shadow-sm hidden"
+                controls
+                muted
+              ></video>
+            </div>
+          </div>
+        </div>
+
+        <!-- Schedules Section Editor -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3">
+              <i class="fas fa-calendar-alt text-amber-600 text-xl"></i>
+              <h2 class="text-xl font-bold text-gray-800">
+                Jadwal Ibadah & Kegiatan
+              </h2>
+            </div>
+            <button
+              id="addScheduleBtn"
+              class="bg-[#d97706] hover:bg-[#b45309] text-white font-semibold px-4 py-2 rounded-lg transition flex items-center gap-2"
+            >
+              <i class="fas fa-plus"></i>
+              Tambah Jadwal
+            </button>
+          </div>
+
+          <p class="text-sm text-gray-600 mb-6">
+            Kelola jadwal ibadah yang tampil di section jadwal
+          </p>
+
+          <div class="space-y-4 mb-6">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                Judul Section
+              </label>
+              <input
+                type="text"
+                id="schedulesTitle"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Jadwal Ibadah & Kegiatan"
+                maxlength="100"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                Sub Judul
+              </label>
+              <textarea
+                id="schedulesSubtitle"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                rows="2"
+                placeholder="Kami mengundang Anda untuk bersekutu bersama kami. Berikut adalah jadwal kegiatan rutin kami."
+                maxlength="300"
+              ></textarea>
+            </div>
+          </div>
+
+          <!-- Schedule Cards Container -->
+          <div class="space-y-4 mb-4" id="scheduleCardsContainer">
+            <!-- Schedule cards will be dynamically inserted here -->
+          </div>
+
+          <div class="bg-amber-50 border border-blue-200 rounded-lg p-4">
+            <div class="flex gap-3">
+              <i class="fas fa-info-circle text-amber-600 mt-1"></i>
+              <div class="text-sm text-blue-800">
+                <strong>Petunjuk:</strong>
+                <ul class="list-disc list-inside mt-2 space-y-1">
+                  <li>Minimal harus ada 1 jadwal, maksimal 5 jadwal</li>
+                  <li>Gunakan tombol ↑↓ untuk mengatur urutan tampilan</li>
+                  <li>Pastikan semua field diisi sebelum menyimpan</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- About Section Editor -->
+        <div class="bg-white rounded-lg shadow-md p-6 mt-6">
+          <div class="flex items-center gap-3 mb-4">
+            <i class="fas fa-info-circle text-amber-600 text-xl"></i>
+            <h2 class="text-xl font-bold text-gray-800">
+              Section "Tentang Kami"
+            </h2>
+          </div>
+          <p class="text-sm text-gray-600 mb-6">
+            Konten yang tampil di bagian "Mengenal GKI Kutisari Indah" dan
+            gambar gedung gereja.
+          </p>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Kolom teks -->
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                  Label Kecil (Badge)
+                </label>
+                <input
+                  type="text"
+                  id="aboutBadge"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="TENTANG KAMI"
+                  maxlength="50"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                  Judul Utama
+                </label>
+                <input
+                  type="text"
+                  id="aboutHeading"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Mengenal GKI Kutisari Indah"
+                  maxlength="100"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                  Paragraf 1
+                </label>
+                <textarea
+                  id="aboutParagraph1"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  rows="3"
+                  maxlength="300"
+                  placeholder="Komunitas yang bertumbuh dalam pengenalan akan Kristus, saling mengasihi, dan melayani."
+                ></textarea>
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                  Paragraf 2
+                </label>
+                <textarea
+                  id="aboutParagraph2"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  rows="3"
+                  maxlength="300"
+                  placeholder="Visi kami: gereja yang relevan, berdampak, dan menjadi berkat."
+                ></textarea>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Teks Tombol
+                  </label>
+                  <input
+                    type="text"
+                    id="aboutCtaText"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Visi, Misi & Sejarah"
+                    maxlength="50"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    URL Tombol
+                  </label>
+                  <input
+                    type="text"
+                    id="aboutCtaUrl"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="# atau link halaman lain"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Kolom gambar -->
+            <div class="space-y-2">
+              <label class="block text-sm font-medium text-gray-700">
+                Foto Gedung Gereja (maks. 2 MB)
+              </label>
+
+              <input
+                type="file"
+                id="aboutImageFile"
+                accept="image/*"
+                class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+
+              <!-- Hidden input untuk menyimpan URL, dipakai JS & API -->
+              <input type="hidden" id="aboutImageUrl" />
+
+              <p class="text-xs text-gray-500">
+                Pilih file gambar. Setelah diunggah, URL akan otomatis
+                tersimpan.
+              </p>
+
+              <img
+                id="aboutImagePreview"
+                src=""
+                alt="Preview Gedung Gereja"
+                class="mt-2 rounded-lg shadow-sm max-h-40 object-cover hidden"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Pastor Section Editor -->
+        <div class="bg-white rounded-lg shadow-md p-6 mt-6">
+          <div class="flex items-center gap-3 mb-4">
+            <i class="fas fa-user-tie text-amber-600 text-xl"></i>
+            <h2 class="text-xl font-bold text-gray-800">
+              Section "Profil Gembala Sidang"
+            </h2>
+          </div>
+          <p class="text-sm text-gray-600 mb-6">
+            Konten yang tampil di bagian profil gembala, termasuk foto, nomor
+            telepon dan link "Hubungi Pendeta".
+          </p>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Kolom teks -->
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                  Label Kecil (Badge)
+                </label>
+                <input
+                  type="text"
+                  id="pastorBadge"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="PROFIL GEMBALA SIDANG"
+                  maxlength="50"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                  Nama Gembala
+                </label>
+                <input
+                  type="text"
+                  id="pastorName"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Pdt. William Suryajaya"
+                  maxlength="100"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                  Nomor Telepon
+                </label>
+                <input
+                  type="text"
+                  id="pastorPhone"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="087808786969"
+                  maxlength="30"
+                />
+                <p class="text-xs text-gray-500 mt-1">
+                  Akan dipakai untuk teks dan juga link <code>tel:</code> di
+                  website publik.
+                </p>
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                  Deskripsi Singkat
+                </label>
+                <textarea
+                  id="pastorDescription"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  rows="3"
+                  maxlength="300"
+                  placeholder="Gembala sidang yang memimpin dengan dedikasi dan kasih, membimbing jemaat dalam pertumbuhan rohani."
+                ></textarea>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Teks Tombol
+                  </label>
+                  <input
+                    type="text"
+                    id="pastorButtonText"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Hubungi Pendeta"
+                    maxlength="50"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    URL Tombol (WhatsApp / lainnya)
+                  </label>
+                  <input
+                    type="text"
+                    id="pastorWhatsappUrl"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="https://wa.me/6287808786969"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Kolom gambar -->
+            <div class="space-y-2">
+              <label class="block text-sm font-medium text-gray-700">
+                Foto Gembala Sidang (maks. 2 MB)
+              </label>
+
+              <input
+                type="file"
+                id="pastorImageFile"
+                accept="image/*"
+                class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+
+              <!-- Hidden input untuk menyimpan URL, dipakai JS & API -->
+              <input type="hidden" id="pastorImageUrl" />
+
+              <p class="text-xs text-gray-500">
+                Pilih file gambar. Setelah diunggah, URL akan otomatis
+                tersimpan.
+              </p>
+
+              <img
+                id="pastorImagePreview"
+                src=""
+                alt="Foto Gembala"
+                class="mt-2 rounded-lg shadow-sm max-h-40 object-cover hidden"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- Modals -->
+    <div
+      id="user-modal"
+      class="modal fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50"
+    >
+      <div class="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
+        <h2 id="user-modal-title" class="text-2xl font-bold mb-6"></h2>
+        <form id="user-modal-form">
+          <input type="hidden" id="user-id" />
+          <div class="space-y-4">
+            <div>
+              <label
+                for="user-fullname"
+                class="block text-sm font-medium text-gray-700"
+                >Nama Lengkap</label
+              ><input
+                type="text"
+                id="user-fullname"
+                required
+                class="w-full p-2 border border-gray-300 rounded-md"
+              />
+            </div>
+            <div>
+              <label
+                for="user-email"
+                class="block text-sm font-medium text-gray-700"
+                >Email</label
+              ><input
+                type="email"
+                id="user-email"
+                required
+                class="w-full p-2 border border-gray-300 rounded-md"
+              />
+            </div>
+            <div>
+              <label
+                for="user-password"
+                class="block text-sm font-medium text-gray-700"
+                >Password</label
+              ><input
+                type="password"
+                id="user-password"
+                class="w-full p-2 border border-gray-300 rounded-md"
+                placeholder="Kosongkan jika tidak ingin diubah"
+              />
+            </div>
+
+            <!-- Privileges Section (Hidden by default) -->
+            <div
+              id="user-privileges-container"
+              class="hidden border-t pt-4 mt-4"
+            >
+              <label class="block text-sm font-bold text-gray-700 mb-2"
+                >Hak Akses (Privileges)</label
+              >
+              <div class="grid grid-cols-2 gap-2 text-sm">
+                <label class="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    name="privileges"
+                    value="inventory"
+                    class="rounded text-amber-600 focus:ring-amber-500"
+                  />
+                  <span>Barang (Inventory)</span>
+                </label>
+                <label class="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    name="privileges"
+                    value="transport"
+                    class="rounded text-amber-600 focus:ring-amber-500"
+                  />
+                  <span>Transportasi</span>
+                </label>
+                <label class="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    name="privileges"
+                    value="room"
+                    class="rounded text-amber-600 focus:ring-amber-500"
+                  />
+                  <span>Ruangan</span>
+                </label>
+                <label class="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    name="privileges"
+                    value="users"
+                    class="rounded text-amber-600 focus:ring-amber-500"
+                  />
+                  <span>User Management</span>
+                </label>
+                <label class="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    name="privileges"
+                    value="stock_opname"
+                    class="rounded text-amber-600 focus:ring-amber-500"
+                  />
+                  <span>Stok Opname</span>
+                </label>
+                <label class="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    name="privileges"
+                    value="website"
+                    class="rounded text-amber-600 focus:ring-amber-500"
+                  />
+                  <span>Website GKI</span>
+                </label>
+              </div>
+            </div>
+          </div>
+          <div class="flex justify-end space-x-4 mt-8">
+            <button
+              type="button"
+              id="user-modal-close"
+              class="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300"
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              class="px-4 py-2 bg-[#d97706] text-white rounded-md hover:bg-[#b45309]"
+            >
+              Simpan
+            </button>
+          </div>
+          <p
+            id="user-modal-feedback"
+            class="mt-4 text-center font-semibold"
+          ></p>
+        </form>
+      </div>
+    </div>
+    <div
+      id="room-modal"
+      class="modal fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50"
+    >
+      <div class="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
+        <h2 id="room-modal-title" class="text-2xl font-bold mb-6"></h2>
+        <form id="room-modal-form">
+          <input type="hidden" id="room-id" />
+          <div class="space-y-4">
+            <div>
+              <label
+                for="room-name"
+                class="block text-sm font-medium text-gray-700"
+                >Nama Ruangan</label
+              ><input
+                type="text"
+                id="room-name"
+                required
+                class="w-full p-2 border border-gray-300 rounded-md"
+              />
+            </div>
+            <div>
+              <label
+                for="room-lokasi"
+                class="block text-sm font-medium text-gray-700"
+                >Lokasi</label
+              ><input
+                type="text"
+                id="room-lokasi"
+                class="w-full p-2 border border-gray-300 rounded-md"
+              />
+            </div>
+            <div>
+              <label
+                for="room-kapasitas"
+                class="block text-sm font-medium text-gray-700"
+                >Kapasitas (Orang)</label
+              ><input
+                type="number"
+                id="room-kapasitas"
+                class="w-full p-2 border border-gray-300 rounded-md"
+              />
+            </div>
+            <div>
+              <label
+                for="room-penanggung-jawab"
+                class="block text-sm font-medium text-gray-700"
+                >Penanggung Jawab</label
+              ><select
+                id="room-penanggung-jawab"
+                required
+                class="w-full p-2 border border-gray-300 rounded-md"
+              >
+                <option value="">Memuat...</option>
+              </select>
+            </div>
+          </div>
+          <div class="flex justify-end space-x-4 mt-8">
+            <button
+              type="button"
+              id="room-modal-close"
+              class="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300"
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              class="px-4 py-2 bg-[#d97706] text-white rounded-md hover:bg-[#b45309]"
+            >
+              Simpan
+            </button>
+          </div>
+          <p
+            id="room-modal-feedback"
+            class="mt-4 text-center font-semibold"
+          ></p>
+        </form>
+      </div>
+    </div>
+
+    <!-- Global Action Menu (Solusi Baru) -->
+    <div
+      id="global-action-menu"
+      class="absolute hidden z-20 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5"
+      role="menu"
+    >
+      <div class="py-1" role="none" id="global-action-menu-items">
+        <!-- Items will be injected by JavaScript -->
+      </div>
+    </div>
+
+    <!-- QR Code Libraries -->
+    <script
+      src="https://unpkg.com/html5-qrcode"
+      type="text/javascript"
+    ></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <!-- SheetJS for Excel Export -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+    <!-- JavaScript Modules -->
+    <script src="js/utils/export.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/loader.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/pages/dashboard.js"></script>
+    <script src="js/pages/barang.js"></script>
+    <script src="js/pages/ruangan.js"></script>
+    <script src="js/pages/user-management.js"></script>
+    <script src="js/pages/website-gki.js"></script>
+    <script src="js/pages/transportasi.js"></script>
+    <script src="js/pages/stok-opname.js"></script>
+    <script src="js/router.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+</html>

@@ -20,7 +20,7 @@ document.addEventListener("click", (e) => {
 
 // Global function to update sidebar based on privileges
 window.updateSidebarVisibility = function() {
-  const userRole = localStorage.getItem("userRole");
+  const dashboardLink = document.getElementById("dashboard-link");
   const managementLink = document.getElementById("management-link"); // User Management
   const stokOpnameLink = document.getElementById("stok-opname-link");
   const websiteGkiLink = document.getElementById("website-gki-link");
@@ -28,71 +28,16 @@ window.updateSidebarVisibility = function() {
   const transportasiLink = document.getElementById("transportasi-link");
   const ruanganLink = document.getElementById("ruangan-link");
 
-  // Helper to check privilege
-  const hasPrivilege = (priv) => {
-    if (userRole !== "management") return false;
-    const privileges = localStorage.getItem("userPrivileges");
-    if (!privileges) return true; // Full access if no privileges defined
-    try {
-      const privs = JSON.parse(privileges);
-      return Array.isArray(privs) && privs.includes(priv);
-    } catch (e) { return false; }
-  };
-
-  // Reset all to hidden first (except dashboard which is always visible)
+  // Hide everything except Website GKI
+  if (dashboardLink) dashboardLink.classList.add("hidden");
+  if (barangLink) barangLink.classList.add("hidden");
+  if (transportasiLink) transportasiLink.classList.add("hidden");
+  if (ruanganLink) ruanganLink.classList.add("hidden");
   if (managementLink) managementLink.classList.add("hidden");
   if (stokOpnameLink) stokOpnameLink.classList.add("hidden");
-  if (websiteGkiLink) websiteGkiLink.classList.add("hidden");
   
-  // For member features (Barang, Transport, Ruangan), they might be visible to members too?
-  // Previously they were visible to everyone.
-  // If userRole is member, they should see Barang, Transport, Ruangan?
-  // Let's assume Members have access to Barang, Transport, Ruangan by default (for borrowing).
-  // Only Management needs privilege checks to MANAGE them.
-  // BUT, my router logic blocked access to #barang if !hasPrivilege("inventory").
-  // Wait, `router.js` logic:
-  // `if (hasPrivilege("inventory")) { loadBarangPage(); }`
-  // `hasPrivilege` returns FALSE if userRole !== "management".
-  // THIS IS A BUG in my plan. Members need access to these pages to borrow items!
-  // I need to fix `router.js` first or adjust `hasPrivilege` to allow members.
-  
-  // Correction: Members should have access to #barang, #transportasi, #ruangan for VIEWING/BORROWING.
-  // Management with "inventory" privilege has access to MANAGE.
-  // Management WITHOUT "inventory" privilege... should they see it?
-  // If they are management, they probably shouldn't see it if they don't have privilege.
-  // OR, they see it but only in "Member View"?
-  // The requirement says "Privilege system for role management".
-  // "Allow different management roles to have varying levels of access".
-  // So a "User Manager" shouldn't see "Inventory" tab?
-  // If so, then `router.js` logic is correct for Management.
-  // But for Members, `hasPrivilege` returns false, so they get "Access Denied".
-  
-  // I must fix `router.js` logic to allow Members.
-  // I will update `updateSidebarVisibility` to handle this.
-  
-  if (userRole === "member") {
-    if (barangLink) barangLink.classList.remove("hidden");
-    if (transportasiLink) transportasiLink.classList.remove("hidden");
-    if (ruanganLink) ruanganLink.classList.remove("hidden");
-  } else if (userRole === "management") {
-    // Management: Check privileges
-    if (barangLink) {
-        if (hasPrivilege("inventory")) barangLink.classList.remove("hidden");
-        else barangLink.classList.add("hidden");
-    }
-    if (transportasiLink) {
-        if (hasPrivilege("transport")) transportasiLink.classList.remove("hidden");
-        else transportasiLink.classList.add("hidden");
-    }
-    if (ruanganLink) {
-        if (hasPrivilege("room")) ruanganLink.classList.remove("hidden");
-        else ruanganLink.classList.add("hidden");
-    }
-    
-    if (managementLink && hasPrivilege("users")) managementLink.classList.remove("hidden");
-    if (stokOpnameLink && hasPrivilege("stock_opname")) stokOpnameLink.classList.remove("hidden");
-    if (websiteGkiLink && hasPrivilege("website")) websiteGkiLink.classList.remove("hidden");
-  }
+  // Website GKI should always be visible
+  if (websiteGkiLink) websiteGkiLink.classList.remove("hidden");
 };
 
 document.addEventListener("DOMContentLoaded", () => {

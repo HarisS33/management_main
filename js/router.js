@@ -26,8 +26,8 @@ function router() {
   let hash = window.location.hash;
   if (!hash) {
     if (localStorage.getItem("authToken")) {
-      hash = "#dashboard";
-      window.location.hash = "#dashboard";
+      hash = "#website-gki";
+      window.location.hash = "#website-gki";
     } else {
       return;
     }
@@ -36,7 +36,7 @@ function router() {
   document.querySelectorAll(".nav-link").forEach((link) => {
     link.classList.toggle(
       "bg-gray-700",
-      link.getAttribute("href") === hash
+      link.getAttribute("href") === hash || link.getAttribute("data-page") === hash.slice(1)
     );
   });
 
@@ -59,7 +59,7 @@ function router() {
   contentArea.innerHTML = "";
   switch (hash) {
     case "#dashboard":
-      loadDashboardPage();
+      window.location.hash = "#website-gki";
       break;
     case "#barang":
       if (localStorage.getItem("userRole") === "member" || hasPrivilege("inventory")) {
@@ -90,12 +90,7 @@ function router() {
       }
       break;
     case "#website-gki":
-      if (hasPrivilege("website")) {
-        loadWebsiteGkiPage();
-      } else {
-        contentArea.innerHTML =
-          '<h1 class="text-2xl text-red-600 p-8">Akses Ditolak: Anda tidak memiliki izin untuk mengakses halaman Website GKI.</h1>';
-      }
+      loadWebsiteGkiPage();
       break;
     case "#stok-opname":
       if (hasPrivilege("stock_opname")) {
@@ -105,7 +100,6 @@ function router() {
       }
       break;
     default:
-      window.location.hash = "#dashboard";
-      loadDashboardPage();
+      window.location.hash = "#website-gki";
   }
 }

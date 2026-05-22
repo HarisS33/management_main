@@ -213,20 +213,30 @@
     <template id="website-gki-template">
       <div class="max-w-7xl mx-auto">
         <!-- Header -->
-        <div class="flex items-center justify-between mb-8">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
             <h1 class="text-3xl font-bold text-gray-800">Kelola Website GKI</h1>
             <p class="text-gray-600 mt-2">
               Ubah konten hero dan jadwal ibadah yang tampil di website publik
             </p>
           </div>
-          <button
-            id="saveWebsiteBtn"
-            class="bg-[#d97706] hover:bg-[#b45309] text-white font-semibold px-6 py-3 rounded-lg transition flex items-center gap-2"
-          >
-            <i class="fas fa-save"></i>
-            Simpan Perubahan
-          </button>
+          <div class="flex flex-wrap items-center gap-3">
+            <a
+              href="https://gkikutisari.vercel.app/"
+              target="_blank"
+              class="border border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold px-5 py-3 rounded-lg transition flex items-center gap-2"
+            >
+              <i class="fas fa-external-link-alt text-gray-500"></i>
+              Buka Website Publik
+            </a>
+            <button
+              id="saveWebsiteBtn"
+              class="bg-[#d97706] hover:bg-[#b45309] text-white font-semibold px-6 py-3 rounded-lg transition flex items-center gap-2"
+            >
+              <i class="fas fa-save"></i>
+              Simpan Perubahan
+            </button>
+          </div>
         </div>
 
         <!-- Hero Section Editor -->

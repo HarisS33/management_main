@@ -244,7 +244,7 @@ async function handleInventory(req, res, supabase, user) {
             <p><strong>Barang:</strong> ${itemName} (${itemCode})</p>
             <p><strong>Waktu Mulai:</strong> ${startTime.toLocaleString('id-ID')}</p>
             <p><strong>Waktu Selesai:</strong> ${endTime.toLocaleString('id-ID')}</p>
-            <p>Mohon cek dashboard untuk persetujuan: <a href="https://gki-management.vercel.app/#dashboard">Dashboard</a></p>
+            <p>Mohon cek dashboard untuk persetujuan: <a href="https://management-gkikutisari.vercel.app/#dashboard">Dashboard</a></p>
           `
         });
 
@@ -313,7 +313,7 @@ async function handleInventory(req, res, supabase, user) {
             <p><strong>Barang:</strong> ${template.name} (Jumlah: ${quantity})</p>
             <p><strong>Waktu Mulai:</strong> ${startTime.toLocaleString('id-ID')}</p>
             <p><strong>Waktu Selesai:</strong> ${endTime.toLocaleString('id-ID')}</p>
-            <p>Mohon cek dashboard untuk persetujuan: <a href="https://gki-management.vercel.app/#dashboard">Dashboard</a></p>
+            <p>Mohon cek dashboard untuk persetujuan: <a href="https://management-gkikutisari.vercel.app/#dashboard">Dashboard</a></p>
           `
         });
 
@@ -464,7 +464,7 @@ async function handleRooms(req, res, supabase, user) {
             <p><strong>Waktu Mulai:</strong> ${new Date(start_time).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}</p>
             <p><strong>Waktu Selesai:</strong> ${new Date(end_time).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}</p>
             <p><strong>Durasi:</strong> ${durationHours} Jam</p>
-            <p>Mohon cek dashboard untuk persetujuan: <a href="https://gki-management.vercel.app/#dashboard">Dashboard</a></p>
+            <p>Mohon cek dashboard untuk persetujuan: <a href="https://management-gkikutisari.vercel.app/#dashboard">Dashboard</a></p>
           `
         });
       }
@@ -638,7 +638,7 @@ async function handleTransports(req, res, supabase, user) {
             <p><strong>Waktu Mulai:</strong> ${new Date(borrow_start).toLocaleString('id-ID')}</p>
             <p><strong>Waktu Selesai:</strong> ${new Date(borrow_end).toLocaleString('id-ID')}</p>
             <p><strong>Durasi:</strong> ${durationStr}</p>
-            <p>Mohon cek dashboard untuk persetujuan: <a href="https://gki-management.vercel.app/#dashboard">Dashboard</a></p>
+            <p>Mohon cek dashboard untuk persetujuan: <a href="https://management-gkikutisari.vercel.app/#dashboard">Dashboard</a></p>
           `
         });
       }

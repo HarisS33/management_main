@@ -303,18 +303,7 @@ function openUserModal(mode, userData = {}, role = "member") {
     document.getElementById("user-id").value = "";
   }
   
-  // Handle Privileges UI
-  const privContainer = document.getElementById("user-privileges-container");
-  if (role === "management") {
-    privContainer.classList.remove("hidden");
-    const checkboxes = privContainer.querySelectorAll("input[name='privileges']");
-    const userPrivs = userData.privileges || [];
-    checkboxes.forEach(cb => {
-      cb.checked = mode === "edit" ? userPrivs.includes(cb.value) : false;
-    });
-  } else {
-    privContainer.classList.add("hidden");
-  }
+  // Privileges UI has been removed
   
   modal.classList.remove("hidden");
   modal.classList.add("flex");
@@ -341,10 +330,7 @@ async function handleUserFormSubmit(e) {
     role: role 
   };
 
-  if (role === "management") {
-    const checkboxes = document.querySelectorAll("input[name='privileges']:checked");
-    payload.privileges = Array.from(checkboxes).map(cb => cb.value);
-  }
+
   
   const password = document.getElementById("user-password").value;
   if (password) {

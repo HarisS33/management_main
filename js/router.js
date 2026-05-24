@@ -23,14 +23,19 @@ function router() {
     sidebarOverlay.classList.add("hidden");
   }
   
+  if (!localStorage.getItem("authToken")) {
+    window.location.hash = "";
+    const loginScreen = document.getElementById("login-screen");
+    const appLayout = document.getElementById("app-layout");
+    if (loginScreen) loginScreen.style.display = "flex";
+    if (appLayout) appLayout.classList.add("hidden");
+    return;
+  }
+
   let hash = window.location.hash;
   if (!hash) {
-    if (localStorage.getItem("authToken")) {
-      hash = "#website-gki";
-      window.location.hash = "#website-gki";
-    } else {
-      return;
-    }
+    hash = "#website-gki";
+    window.location.hash = "#website-gki";
   }
 
   document.querySelectorAll(".nav-link").forEach((link) => {

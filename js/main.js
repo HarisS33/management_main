@@ -28,16 +28,41 @@ window.updateSidebarVisibility = function() {
   const transportasiLink = document.getElementById("transportasi-link");
   const ruanganLink = document.getElementById("ruangan-link");
 
-  // Hide everything except Website GKI
+  // Hide everything except Website GKI and User Management
   if (dashboardLink) dashboardLink.classList.add("hidden");
   if (barangLink) barangLink.classList.add("hidden");
   if (transportasiLink) transportasiLink.classList.add("hidden");
   if (ruanganLink) ruanganLink.classList.add("hidden");
-  if (managementLink) managementLink.classList.add("hidden");
   if (stokOpnameLink) stokOpnameLink.classList.add("hidden");
   
   // Website GKI should always be visible
   if (websiteGkiLink) websiteGkiLink.classList.remove("hidden");
+
+  // Helper to check privilege
+  const userRole = localStorage.getItem("userRole");
+  let hasUsersPrivilege = false;
+  
+  if (userRole === "management" || userRole === "admin") {
+    const privileges = localStorage.getItem("userPrivileges");
+    if (!privileges) {
+      hasUsersPrivilege = true;
+    } else {
+      try {
+        const privs = JSON.parse(privileges);
+        hasUsersPrivilege = Array.isArray(privs) && privs.includes("users");
+      } catch (e) {
+        hasUsersPrivilege = false;
+      }
+    }
+  }
+
+  if (managementLink) {
+    if (hasUsersPrivilege) {
+      managementLink.classList.remove("hidden");
+    } else {
+      managementLink.classList.add("hidden");
+    }
+  }
 };
 
 document.addEventListener("DOMContentLoaded", () => {

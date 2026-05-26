@@ -47,8 +47,10 @@ export default async function handler(req, res) {
   }
 
   const { user, profile, error: authError } = await verifyManagement(req);
-  if (authError)
-    return res.status(403).json({ error: "Access Forbidden: " + authError });
+  if (authError) {
+    const statusCode = authError.includes("Token") ? 401 : 403;
+    return res.status(statusCode).json({ error: (statusCode === 403 ? "Access Forbidden: " : "") + authError });
+  }
 
   const supabase = createClient(
     process.env.SUPABASE_URL,
